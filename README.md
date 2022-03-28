@@ -87,3 +87,28 @@ cartridge admin probe \
   --run-dir ./tmp/run \
   --uri localhost:3302
 ```
+
+## Spaces
+
+```lua
+product = box.schema.space.create('customer',
+    { if_not_exists = true }
+)
+product:format({
+    {'name', 'string'},
+    {'money', 'unsigned'},
+    {'revenue', 'string'},
+})
+product:create_index('name', {
+    parts = {'name'},
+    unique = true,
+})
+product:create_index('bucket_id', {
+    parts = {'name', 'revenue'},
+    unique = false,
+})
+product:insert({'dima', 1000, 'hi'})
+product:insert({'semen', 500, 'hi'})
+product:insert({'galya', 300, 'mid'})
+product:insert({'masha', 10, 'low'})
+```
