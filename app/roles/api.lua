@@ -5,8 +5,8 @@ local log = require('log')
 local err_vshard_router = errors.new_class("Vshard routing error")
 local err_httpd = errors.new_class("httpd error")
 
-local function json_response(req, json, status) 
-    local resp = req:render({json = json})
+local function json_response(req, json, status)
+    local resp = req:render({ json = json })
     resp.status = status
     return resp
 end
@@ -74,41 +74,39 @@ local function http_profile_add(req)
     if resp.error then
         return storage_error_response(req, resp.error)
     end
-    
-    return json_response(req, {info = "Successfully created"}, 201)
+
+    return json_response(req, { info = "Successfully created" }, 201)
 end
 
 local function http_profile_update(req)
     local profile_id = tonumber(req:stash('profile_id'))
     local data = req:json()
     local changes = data.changes
-    local password = data.password
 
     local router = cartridge.service_get('vshard-router').get()
     local bucket_id = router:bucket_id(profile_id)
-    
+
     local resp, error = err_vshard_router:pcall(
         router.call,
         router,
         bucket_id,
         'read',
         'profile_update',
-        {profile_id, password, changes}
+        { profile_id, changes }
     )
 
     if error then
-        return internal_error_response(req,error)
+        return internal_error_response(req, error)
     end
     if resp.error then
         return storage_error_response(req, resp.error)
     end
-    
+
     return json_response(req, resp.profile, 200)
 end
 
 local function http_profile_get(req)
     local profile_id = tonumber(req:stash('profile_id'))
-    local password = req:json().password
     local router = cartridge.service_get('vshard-router').get()
     local bucket_id = router:bucket_id(profile_id)
 
@@ -118,7 +116,7 @@ local function http_profile_get(req)
         bucket_id,
         'read',
         'profile_get',
-        {profile_id, password}
+        { profile_id, }
     )
 
     if error then
@@ -133,7 +131,6 @@ end
 
 local function http_profile_delete(req)
     local profile_id = tonumber(req:stash('profile_id'))
-    local password = req:json().password
     local router = cartridge.service_get('vshard-router').get()
     local bucket_id = router:bucket_id(profile_id)
 
@@ -143,7 +140,7 @@ local function http_profile_delete(req)
         bucket_id,
         'write',
         'profile_delete',
-        {profile_id, password}
+        { profile_id, }
     )
 
     if error then
@@ -153,7 +150,7 @@ local function http_profile_delete(req)
         return storage_error_response(req, resp.error)
     end
 
-    return json_response(req, {info = "Deleted"}, 200)
+    return json_response(req, { info = "Deleted" }, 200)
 end
 
 local function init(opts)
@@ -186,7 +183,7 @@ local function init(opts)
         http_profile_update
     )
     httpd:route(
-        {path = '/profile/:profile_id', method = 'DELETE', public = true},
+        { path = '/profile/:profile_id', method = 'DELETE', public = true },
         http_profile_delete
     )
 
@@ -195,7 +192,7 @@ local function init(opts)
 end
 
 return {
-    role_name = 'api',
+    role_name = 'app.roles.api',
     init = init,
     dependencies = {
         'cartridge.roles.vshard-router'

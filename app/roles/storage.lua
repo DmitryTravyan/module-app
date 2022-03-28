@@ -1,10 +1,7 @@
--- модуль проверки аргументов в функциях
 local checks = require('checks')
 local errors = require('errors')
--- класс ошибок дуступа к хранилищу профилей
 local err_storage = errors.new_class("Storage error")
 
--- Функция преобразующая кортеж в таблицу согласно схеме хранения
 local function tuple_to_table(format, tuple)
     local map = {}
     for i, v in ipairs(format) do
@@ -13,7 +10,6 @@ local function tuple_to_table(format, tuple)
     return map
 end
 
--- Функция заполняющая недостающие поля таблицы minor из таблицы major
 local function complete_table(major, minor)
     for k, v in pairs(major) do
         if minor[k] == nil then
@@ -32,8 +28,6 @@ local function init_space()
                 {'first_name', 'string'},
                 {'sur_name', 'string'},
                 {'patronymic', 'string'},
-                {'shadow','string'},
-                {'salt', 'string'},
                 {'msgs_count', 'unsigned'},
                 {'service_info', 'string'}
             },
@@ -54,24 +48,18 @@ end
 local function profile_add(profile)
     checks('table')
 
-    -- Проверяем существование пользователя с таким id
     local exist = box.space.profile:get(profile.profile_id)
     if exist ~= nil then
         return {ok = false, error = err_storage:new("Profile already exist")}
     end
 
-    local password_data = auth.create_password(profile.password)
-
-    profile.shadow = password_data.shadow
-    profile.salt = password_data.salt
-    profile.password = nil
     box.space.profile:insert(box.space.profile:frommap(profile))
 
     return {ok = true, error = nil}
 end
 
-local function profile_update(id, password, changes)
-    checks('number', 'string', 'table')
+local function profile_update(id, changes)
+    checks('number', 'table')
     
     local exists = box.space.profile:get(id)
 
@@ -80,27 +68,16 @@ local function profile_update(id, password, changes)
     end
 
     exists = tuple_to_table(box.space.profile:format(), exists)
-    if not auth.check_password(exists, password) then
-        return {profile = nil, error = err_storage:new("Unauthorized")}
-    end
 
     complete_table(exists, changes)
-    if changes.password ~= nil then
-        local password_data = auth.create_password(changes.password)
-        changes.shadow = password_data.shadow
-        changes.salt = password_data.salt
-        changes.password = nil
-    end
     box.space.profile:replace(box.space.profile:frommap(changes))
 
     changes.bucket_id = nil
-    changes.salt = nil
-    changes.shadow = nil
     return {profile = changes, error = nil}
 end
 
-local function profile_get(id, password)
-    checks('number', 'string')
+local function profile_get(id)
+    checks('number')
     
     local profile = box.space.profile:get(id)
     if profile == nil then
@@ -110,13 +87,11 @@ local function profile_get(id, password)
     profile = tuple_to_table(box.space.profile:format(), profile)
     
     profile.bucket_id = nil
-    profile.shadow = nil
-    profile.salt = nil
     return {profile = profile, error = nil}
 end
 
-local function profile_delete(id, password)
-    checks('number', 'string')
+local function profile_delete(id)
+    checks('number')
     
     local exists = box.space.profile:get(id)
     if exists == nil then
@@ -147,7 +122,7 @@ local function init(opts)
 end
 
 return {
-    role_name = 'storage',
+    role_name = 'app.roles.storage',
     init = init,
     utils = {
         profile_add = profile_add,

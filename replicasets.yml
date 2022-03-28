@@ -3,14 +3,14 @@ router:
   - router
   roles:
   - failover-coordinator
-  - app.api
+  - app.roles.api
   all_rw: false
 s-1:
   instances:
   - s1-master
   - s1-replica
   roles:
-  - app.storage
+  - app.roles.storage
   weight: 1
   all_rw: false
   vshard_group: default
@@ -19,7 +19,7 @@ s-2:
   - s2-master
   - s2-replica
   roles:
-  - app.storage
+  - app.roles.storage
   weight: 1
   all_rw: false
   vshard_group: default
